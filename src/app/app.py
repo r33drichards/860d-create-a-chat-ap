@@ -138,8 +138,18 @@ async def post_chat(
             + b'\n'
         )
         messages = await database.get_messages(session_id)
-        async with agent:  # Manage MCP server connections
-            async with agent.run_stream(prompt, message_history=messages) as result:
+        try:
+            async with agent:  # Manage MCP server connections
+                async with agent.run_stream(prompt, message_history=messages) as result:
+                    async for text in result.stream_output(debounce_by=0.01):
+                        m = ModelResponse(parts=[TextPart(text)], timestamp=result.timestamp())
+                        yield json.dumps(to_chat_message(m)).encode('utf-8') + b'\n'
+
+                await database.add_messages(session_id, result.new_messages_json())
+        except Exception as e:  # Fallback if MCP tools fail
+            logfire.error("MCP initialization or run failed, falling back to no-tools agent", error=e)
+            fallback_agent = Agent('openai:gpt-4o')
+            async with fallback_agent.run_stream(prompt, message_history=messages) as result:
                 async for text in result.stream_output(debounce_by=0.01):
                     m = ModelResponse(parts=[TextPart(text)], timestamp=result.timestamp())
                     yield json.dumps(to_chat_message(m)).encode('utf-8') + b'\n'

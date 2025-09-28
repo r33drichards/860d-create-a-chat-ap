@@ -15,7 +15,8 @@ dependencies = [
     "typing-extensions>=4.15.0",
     "uvicorn[standard]>=0.37.0",
     "minizinc>=0.10.0",
-    "mcp-solver[all,mzn]>=2.0.0",
+    "mcp-solver",
+    "mini-agent-action>=0.1.4",
 ]
 
 
@@ -23,3 +24,10 @@ dependencies = [
 [build-system]
 requires = ["uv_build>=0.8.14,<0.9.0"]
 build-backend = "uv_build"
+
+[tool.uv.sources]
+mcp-solver = { git = "https://github.com/r33drichards/mcp-solver", branch = "main"  }
+
+
+[tool.uv.extra-build-dependencies]
+mcp-solver = ["hatchling"]
