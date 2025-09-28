@@ -1,3 +1,4 @@
+
 """Simple chat app example built with FastAPI."""
 
 from __future__ import annotations as _annotations
