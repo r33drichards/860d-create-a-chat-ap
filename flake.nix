@@ -77,6 +77,7 @@
               virtualenv
               pkgs.uv
               pkgs.nodejs
+              pkgs.minizinc
             ];
             env = {
               UV_NO_SYNC = "1";
@@ -96,5 +97,28 @@
       packages = forAllSystems (system: {
         default = pythonSets.${system}.mkVirtualEnv "hello-world-env" workspace.deps.default;
       });
+
+      apps = forAllSystems (system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          pythonSet = pythonSets.${system}.overrideScope editableOverlay;
+          virtualenv = pythonSet.mkVirtualEnv "hello-world-dev-env" workspace.deps.all;
+        in
+        {
+          default = {
+            type = "app";
+            program = toString (pkgs.writeShellScript "run-chat-app" ''
+              export PATH="${virtualenv}/bin:${pkgs.uv}/bin:${pkgs.minizinc}/bin:$PATH"
+              export UV_NO_SYNC=1
+              export UV_PYTHON=${pythonSet.python.interpreter}
+              export UV_PYTHON_DOWNLOADS=never
+              export REPO_ROOT=$(pwd)
+              export PYTHONPATH="${virtualenv}/${pythonSet.python.sitePackages}"
+              cd "$REPO_ROOT"
+              exec ${pythonSet.python.interpreter} src/app
+            '');
+          };
+        }
+      );
     };
 }
