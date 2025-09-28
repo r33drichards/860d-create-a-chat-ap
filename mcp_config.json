@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "mcp-solver": {
-      "command": "uv",
-      "args": ["run", "--with", "mcp-solver", "mcp-solver"]
+      "command": "steam-run",
+      "args": ["uv", "run", "--with", "mcp-solver", "mcp-solver"]
     }
   }
 }

@@ -108,14 +108,14 @@
           default = {
             type = "app";
             program = toString (pkgs.writeShellScript "run-chat-app" ''
-              export PATH="${virtualenv}/bin:${pkgs.uv}/bin:${pkgs.minizinc}/bin:$PATH"
+              export PATH="${virtualenv}/bin:${pkgs.uv}/bin:${pkgs.minizinc}/bin:${pkgs.steam-run}/bin:$PATH"
               export UV_NO_SYNC=1
               export UV_PYTHON=${pythonSet.python.interpreter}
               export UV_PYTHON_DOWNLOADS=never
               export REPO_ROOT=$(pwd)
               export PYTHONPATH="${virtualenv}/${pythonSet.python.sitePackages}"
               cd "$REPO_ROOT"
-              exec ${pythonSet.python.interpreter} src/app
+              ${pkgs.steam-run}/bin/steam-run ${pythonSet.python.interpreter} src/app
             '');
           };
         }
