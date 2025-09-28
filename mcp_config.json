@@ -1,8 +1,20 @@
 {
   "mcpServers": {
     "mcp-solver": {
-      "command": "steam-run",
-      "args": ["uv", "run", "--with", "mcp-solver", "--with", "minizinc", "mcp-solver"]
+      "command": "/run/current-system/sw/bin/nix",
+      "args": [
+        "develop",
+        "/var/tmp/vibe-kanban/worktrees/1526-mcp-errors-when",
+        "--command",
+        "uv",
+        "run",
+        "--with",
+        "mcp-solver",
+        "--with",
+        "minizinc",
+        "mcp-solver",
+        "--z3"
+      ]
     }
   }
 }

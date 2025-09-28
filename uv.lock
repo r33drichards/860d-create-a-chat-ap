@@ -31,6 +31,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "logfire", extra = ["fastapi", "sqlite3"] },
+    { name = "mcp-solver" },
     { name = "minizinc" },
     { name = "openai" },
     { name = "pydantic-ai-slim", extra = ["mcp"] },
@@ -42,6 +43,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.117.1" },
     { name = "logfire", extras = ["fastapi", "sqlite3"], specifier = ">=4.10.0" },
+    { name = "mcp-solver", extras = ["all", "mzn"], specifier = ">=2.0.0" },
     { name = "minizinc", specifier = ">=0.10.0" },
     { name = "openai", specifier = ">=1.0.0" },
     { name = "pydantic-ai-slim", extras = ["mcp"], specifier = ">=1.0.10" },
@@ -409,6 +411,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/0c/9e/e65114795f359f314d7061f4fcb50dfe60026b01b52ad0b986b4631bf8bb/mcp-1.15.0.tar.gz", hash = "sha256:5bda1f4d383cf539d3c035b3505a3de94b20dbd7e4e8b4bd071e14634eeb2d72", size = 469622, upload-time = "2025-09-25T15:39:51.995Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c9/82/4d0df23d5ff5bb982a59ad597bc7cb9920f2650278ccefb8e0d85c5ce3d4/mcp-1.15.0-py3-none-any.whl", hash = "sha256:314614c8addc67b663d6c3e4054db0a5c3dedc416c24ef8ce954e203fdc2333d", size = 166963, upload-time = "2025-09-25T15:39:50.538Z" },
+]
+
+[[package]]
+name = "mcp-solver"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mcp" },
+    { name = "minizinc" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/65/62/0ffa6aab639363bf3276b099b5d32ea91b0f4b676b6ef68630a8339ea76b/mcp_solver-2.0.0.tar.gz", hash = "sha256:d21abb8a45572a4ea24ae82b5274eb2fc33171e75f9d2df4435a803de7cf451f", size = 30032, upload-time = "2024-12-30T03:43:59.456Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/48/eaec0252a55b0f47b60dcc5fa034adf7455a5caac511494a47a2b7e90d92/mcp_solver-2.0.0-py3-none-any.whl", hash = "sha256:84f4f55766e6d29c14ca1df6ddc76c19614c8ecf33123abf8252ff5fb5340f31", size = 10337, upload-time = "2024-12-30T03:43:57.492Z" },
 ]
 
 [[package]]

@@ -15,6 +15,7 @@ dependencies = [
     "typing-extensions>=4.15.0",
     "uvicorn[standard]>=0.37.0",
     "minizinc>=0.10.0",
+    "mcp-solver[all,mzn]>=2.0.0",
 ]
 
 
