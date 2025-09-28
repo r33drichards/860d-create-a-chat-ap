@@ -21,6 +21,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from typing_extensions import LiteralString, ParamSpec, TypedDict
 
 from pydantic_ai import Agent, UnexpectedModelBehavior
+from pydantic_ai.mcp import load_mcp_servers
 from pydantic_ai.messages import (
     ModelMessage,
     ModelMessagesTypeAdapter,
@@ -33,8 +34,10 @@ from pydantic_ai.messages import (
 logfire.configure(send_to_logfire='if-token-present')
 logfire.instrument_pydantic_ai()
 
-agent = Agent('openai:gpt-4o')
 THIS_DIR = Path(__file__).parent
+# Load MCP servers from configuration
+mcp_servers = load_mcp_servers(THIS_DIR.parent.parent / 'mcp_config.json')
+agent = Agent('openai:gpt-4o', toolsets=mcp_servers)
 
 
 @asynccontextmanager
@@ -116,12 +119,13 @@ async def post_chat(
             + b'\n'
         )
         messages = await database.get_messages()
-        async with agent.run_stream(prompt, message_history=messages) as result:
-            async for text in result.stream_output(debounce_by=0.01):
-                m = ModelResponse(parts=[TextPart(text)], timestamp=result.timestamp())
-                yield json.dumps(to_chat_message(m)).encode('utf-8') + b'\n'
+        async with agent:  # Manage MCP server connections
+            async with agent.run_stream(prompt, message_history=messages) as result:
+                async for text in result.stream_output(debounce_by=0.01):
+                    m = ModelResponse(parts=[TextPart(text)], timestamp=result.timestamp())
+                    yield json.dumps(to_chat_message(m)).encode('utf-8') + b'\n'
 
-        await database.add_messages(result.new_messages_json())
+            await database.add_messages(result.new_messages_json())
 
     return StreamingResponse(stream_messages(), media_type='text/plain')
 
