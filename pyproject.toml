@@ -1,41 +1,22 @@
 [project]
-name = "chat-app"
+name = "app"
 version = "0.1.0"
-description = "A simple chat app built with FastAPI and pydantic-ai"
-authors = [
-    {name = "Your Name", email = "your.email@example.com"},
-]
-dependencies = [
-    "fastapi>=0.104.0",
-    "uvicorn[standard]>=0.24.0",
-    "pydantic-ai>=0.0.12",
-    "logfire[fastapi,sqlite3]>=0.15.0",
-    "python-multipart>=0.0.6",
-]
+description = "Add your description here"
 readme = "README.md"
-requires-python = ">= 3.9"
+authors = [
+    { name = "Your Name", email = "you@example.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.117.1",
+    "logfire[fastapi,sqlite3]>=4.10.0",
+    "pydantic-ai[openai]>=1.0.10",
+    "typing-extensions>=4.15.0",
+    "uvicorn[standard]>=0.37.0",
+]
+
+
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.ruff]
-target-version = "py38"
-line-length = 88
-
-[tool.ruff.lint]
-select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "B",  # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "UP", # pyupgrade
-]
-
-[tool.uv]
-dev-dependencies = [
-    "pytest>=7.4.0",
-    "ruff>=0.1.0",
-]
+requires = ["uv_build>=0.8.14,<0.9.0"]
+build-backend = "uv_build"
