@@ -6,6 +6,7 @@ from __future__ import annotations as _annotations
 import asyncio
 import json
 import sqlite3
+import uuid
 from collections.abc import AsyncIterator, Callable
 from concurrent.futures.thread import ThreadPoolExecutor
 from contextlib import asynccontextmanager
@@ -66,9 +67,22 @@ async def get_db(request: Request) -> 'Database':
     return request.state.db
 
 
-@app.get('/chat/')
-async def get_chat(database: 'Database' = Depends(get_db)) -> Response:
-    msgs = await database.get_messages()
+@app.post('/sessions/')
+async def create_session(database: 'Database' = Depends(get_db)) -> dict:
+    session_id = await database.create_session()
+    return {'session_id': session_id}
+
+
+@app.get('/sessions/')
+async def get_sessions(database: 'Database' = Depends(get_db)) -> dict:
+    sessions = await database.get_sessions()
+    return {'sessions': sessions}
+
+
+@app.get('/chat/{session_id}')
+async def get_chat(session_id: str, database: 'Database' = Depends(get_db)) -> Response:
+    await database.update_session_access(session_id)
+    msgs = await database.get_messages(session_id)
     return Response(
         b'\n'.join(json.dumps(to_chat_message(m)).encode('utf-8') for m in msgs),
         media_type='text/plain',
@@ -103,10 +117,14 @@ def to_chat_message(m: ModelMessage) -> ChatMessage:
     raise UnexpectedModelBehavior(f'Unexpected message type for chat app: {m}')
 
 
-@app.post('/chat/')
+@app.post('/chat/{session_id}')
 async def post_chat(
-    prompt: Annotated[str, fastapi.Form()], database: 'Database' = Depends(get_db)
+    session_id: str,
+    prompt: Annotated[str, fastapi.Form()],
+    database: 'Database' = Depends(get_db)
 ) -> StreamingResponse:
+    await database.update_session_access(session_id)
+
     async def stream_messages():
         """Streams new line delimited JSON `Message`s to the client."""
         yield (
@@ -119,14 +137,14 @@ async def post_chat(
             ).encode('utf-8')
             + b'\n'
         )
-        messages = await database.get_messages()
+        messages = await database.get_messages(session_id)
         async with agent:  # Manage MCP server connections
             async with agent.run_stream(prompt, message_history=messages) as result:
                 async for text in result.stream_output(debounce_by=0.01):
                     m = ModelResponse(parts=[TextPart(text)], timestamp=result.timestamp())
                     yield json.dumps(to_chat_message(m)).encode('utf-8') + b'\n'
 
-            await database.add_messages(result.new_messages_json())
+            await database.add_messages(session_id, result.new_messages_json())
 
     return StreamingResponse(stream_messages(), media_type='text/plain')
 
@@ -163,24 +181,74 @@ class Database:
         con = sqlite3.connect(str(file))
         con = logfire.instrument_sqlite3(con)
         cur = con.cursor()
-        cur.execute(
-            'CREATE TABLE IF NOT EXISTS messages (id INT PRIMARY KEY, message_list TEXT);'
-        )
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                created_at TEXT NOT NULL,
+                last_accessed TEXT NOT NULL
+            );
+        ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT NOT NULL,
+                message_list TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (session_id) REFERENCES sessions (id)
+            );
+        ''')
         con.commit()
         return con
 
-    async def add_messages(self, messages: bytes):
+    async def create_session(self) -> str:
+        session_id = str(uuid.uuid4())
+        now = datetime.now(tz=timezone.utc).isoformat()
         await self._asyncify(
             self._execute,
-            'INSERT INTO messages (message_list) VALUES (?);',
-            messages,
+            'INSERT INTO sessions (id, created_at, last_accessed) VALUES (?, ?, ?)',
+            session_id, now, now,
+            commit=True
+        )
+        return session_id
+
+    async def update_session_access(self, session_id: str):
+        now = datetime.now(tz=timezone.utc).isoformat()
+        await self._asyncify(
+            self._execute,
+            'UPDATE sessions SET last_accessed = ? WHERE id = ?',
+            now, session_id,
+            commit=True
+        )
+
+    async def get_sessions(self) -> list[dict]:
+        c = await self._asyncify(
+            self._execute,
+            'SELECT id, created_at, last_accessed FROM sessions ORDER BY last_accessed DESC'
+        )
+        rows = await self._asyncify(c.fetchall)
+        return [
+            {
+                'id': row[0],
+                'created_at': row[1],
+                'last_accessed': row[2]
+            }
+            for row in rows
+        ]
+
+    async def add_messages(self, session_id: str, messages: bytes):
+        now = datetime.now(tz=timezone.utc).isoformat()
+        await self._asyncify(
+            self._execute,
+            'INSERT INTO messages (session_id, message_list, created_at) VALUES (?, ?, ?)',
+            session_id, messages, now,
             commit=True,
         )
-        await self._asyncify(self.con.commit)
 
-    async def get_messages(self) -> list[ModelMessage]:
+    async def get_messages(self, session_id: str) -> list[ModelMessage]:
         c = await self._asyncify(
-            self._execute, 'SELECT message_list FROM messages order by id'
+            self._execute,
+            'SELECT message_list FROM messages WHERE session_id = ? ORDER BY id',
+            session_id
         )
         rows = await self._asyncify(c.fetchall)
         messages: list[ModelMessage] = []
